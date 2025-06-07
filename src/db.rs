@@ -7,8 +7,8 @@ pub async fn get_mongo_client() -> Client {
     dotenv::dotenv().ok();
     // let username = env::var("DB_USERNAME").expect("DB_USERNAME debe ser asignado");
     // let password = env::var("DB_PASSWORD").expect("DB_PASSWORD debe ser asignado");
-    let host = env::var("DB_URL").unwrap_or_else(|_| "mongodb://127.0.0.1".to_string());
-    let port = env::var("DB_PORT").unwrap_or_else(|_| "27017".to_string());
+    let host = env::var("DB_URL").unwrap_or_else(|_| "mongodb://127.0.0.1:8080".to_string());
+    let port = env::var("DB_PORT").unwrap_or_else(|_| "8080".to_string());
     
     let client_url = format!("mongodb://{}:{}", host, port);
     let client_uri = env::var("DB_URL").unwrap_or_else(|_| client_url);

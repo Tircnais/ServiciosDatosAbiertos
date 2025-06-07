@@ -7,19 +7,30 @@ use mongodb::{Client, options::ClientOptions};
 use api_service::routes::configure_routes;
 use crate::models::empresa_model::Empresa;
 use std::env;
+use dotenv::dotenv;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Reemplaza con tu cadena de conexión
-    dotenv::dotenv().ok();
-    let host = env::var("DB_URL").unwrap_or_else(|_| "mongodb://127.0.0.1".to_string());
-    let port = env::var("DB_PORT").unwrap_or_else(|_| "27017".to_string());
-    
-    let client_url = format!("mongodb://{}:{}", host, port);
-    let client_uri = env::var("DB_URL").unwrap_or_else(|_| client_url);
+    // dotenv::dotenv().ok();
+    dotenv().ok();
+    // Intentar obtener la URI completa de la base de datos de la variable de entorno DB_URI
+    let client_uri = match env::var("DB_URI") {
+        Ok(uri) => uri, // Usar DB_URI si está definida
+        Err(_) => {
+            // Si DB_URI no está definida, construir la URI usando DB_HOST y DB_PORT
+            let host = env::var("DB_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+            let port = env::var("DB_PORT").unwrap_or_else(|_| "27017".to_string());
+            // let db_name = env::var("DATABASE_NAME").unwrap_or_else(|_| "DatosAbiertosEcuador".to_string());
+            format!("mongodb://{}:{}", host, port)
+        }
+    };
 
-    println!("Conectando a la base de datos...");
-    let client_options = ClientOptions::parse(client_uri).await?;
+    // Añadimos esta línea para depurar
+    println!("DEBUG: MongoDB client_uri is: {}", client_uri);
+
+    println!("Conectando a la base de datos en: {}", client_uri); // Imprimir la URI que se está usando
+    let client_options = ClientOptions::parse(&client_uri).await?;
     let client = Client::with_options(client_options)?;
 
     let db = client.database("DatosAbiertosEcuador");

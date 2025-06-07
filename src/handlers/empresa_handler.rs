@@ -26,10 +26,20 @@ pub async fn get_empresas(collection: web::Data<Collection<Empresa>>) -> impl Re
 
 /// Obtener una empresa por su RUC
 pub async fn get_empresa_by_ruc(collection: web::Data<Collection<Empresa>>, ruc: web::Path<String>) -> impl Responder {
-    let filter = doc! { "numero_ruc": ruc.into_inner() };
+    let filter = doc! { "NUMERO_RUC": ruc.into_inner() };
     match collection.find_one(filter).await {
         Ok(Some(empresa)) => HttpResponse::Ok().json(empresa),
         Ok(None) => HttpResponse::NotFound().body("RUC no encontrado"),
+        Err(e) => HttpResponse::InternalServerError().body(format!("Error: {}", e)),
+    }
+}
+
+/// Obtener una empresa por su RUC
+pub async fn get_empresa_by_razon_social(collection: web::Data<Collection<Empresa>>, razon_social: web::Path<String>) -> impl Responder {
+    let filter = doc! { "RAZON_SOCIAL": razon_social.into_inner() };
+    match collection.find_one(filter).await {
+        Ok(Some(empresa)) => HttpResponse::Ok().json(empresa),
+        Ok(None) => HttpResponse::NotFound().body("RAZON_SOCIAL no encontrado"),
         Err(e) => HttpResponse::InternalServerError().body(format!("Error: {}", e)),
     }
 }
@@ -47,38 +57,38 @@ pub async fn create_empresa(collection: web::Data<Collection<Empresa>>, nueva_em
 /// Actualizar una empresa
 pub async fn update_empresa_by_ruc(collection: web::Data<Collection<Empresa>>, path: web::Path<String>, empresa_actualizada: web::Json<Empresa>) -> impl Responder {
     let ruc = path.into_inner();
-    let filter = doc! { "numero_ruc": &ruc };
+    let filter = doc! { "NUMERO_RUC": &ruc };
     let update = doc! {
         "$set": {
-            "numero_ruc": &empresa_actualizada.numero_ruc,
-            "razon_social": &empresa_actualizada.razon_social,
-            "provincia_jurisdiccion": &empresa_actualizada.provincia_jurisdiccion,
-            "estado_contribuyente": &empresa_actualizada.estado_contribuyente,
-            "clase_contribuyente": &empresa_actualizada.clase_contribuyente,
-            "fecha_inicio_actividades": empresa_actualizada.fecha_inicio_actividades.as_ref().map(|f| {
+            "NUMERO_RUC": &empresa_actualizada.numero_ruc,
+            "RAZON_SOCIAL": &empresa_actualizada.razon_social,
+            "PROVINCIA_JURISDICION": &empresa_actualizada.provincia_jurisdiccion,
+            "ESTADO_CONTRIBUYENTE": &empresa_actualizada.estado_contribuyente,
+            "CLASE_CONTRIBUYENTE": &empresa_actualizada.clase_contribuyente,
+            "FECHA_INICIO_ACTIVIDADES": empresa_actualizada.fecha_inicio_actividades.as_ref().map(|f| {
                 Bson::DateTime(bson::DateTime::from_millis(f.timestamp_millis()))
             }),
-            "fecha_actualizacion": empresa_actualizada.fecha_actualizacion.as_ref().map(|f| {
+            "FECHA_ACTUALIZACION": empresa_actualizada.fecha_actualizacion.as_ref().map(|f| {
                 Bson::DateTime(bson::DateTime::from_millis(f.timestamp_millis()))
             }),
-            "fecha_suspension_definitiva": empresa_actualizada.fecha_suspension_definitiva.as_ref().map(|f| {
+            "FECHA_SUSPENSION_DEFINITIVA": empresa_actualizada.fecha_suspension_definitiva.as_ref().map(|f| {
                 Bson::DateTime(bson::DateTime::from_millis(f.timestamp_millis()))
             }),
-            "fecha_reinicio_actividades": empresa_actualizada.fecha_reinicio_actividades.as_ref().map(|f| {
+            "FECHA_REINICIO_ACTIVIDADES": empresa_actualizada.fecha_reinicio_actividades.as_ref().map(|f| {
                 Bson::DateTime(bson::DateTime::from_millis(f.timestamp_millis()))
             }),
-            "obligado": &empresa_actualizada.obligado,
-            "tipo_contribuyente": &empresa_actualizada.tipo_contribuyente,
-            "numero_establecimiento": &empresa_actualizada.numero_establecimiento,
-            "nombre_fantasia_comercial": &empresa_actualizada.nombre_fantasia_comercial,
-            "estado_establecimiento": &empresa_actualizada.estado_establecimiento,
-            "descripcion_provincia_est": &empresa_actualizada.descripcion_provincia_est,
-            "descripcion_canton_est": &empresa_actualizada.descripcion_canton_est,
-            "descripcion_parroquia_est": &empresa_actualizada.descripcion_parroquia_est,
-            "codigo_ciiu": &empresa_actualizada.codigo_ciiu,
-            "actividad_economica": &empresa_actualizada.actividad_economica,
-            "agente_retencion": &empresa_actualizada.agente_retencion,
-            "especial": &empresa_actualizada.especial,
+            "OBLIGADO": &empresa_actualizada.obligado,
+            "TIPO_CONTRIBUYENTE": &empresa_actualizada.tipo_contribuyente,
+            "NUMERO_ESTABLECIMIENTO": &empresa_actualizada.numero_establecimiento,
+            "NOMBRE_FANTASIA_COMERCIAL": &empresa_actualizada.nombre_fantasia_comercial,
+            "ESTADO_ESTABLECIMIENTO": &empresa_actualizada.estado_establecimiento,
+            "DESCRIPCION_PROVINCIA_EST": &empresa_actualizada.descripcion_provincia_est,
+            "DESCRIPCION_CANTON_EST": &empresa_actualizada.descripcion_canton_est,
+            "DESCPRIPCION_PARROQUIA_EST": &empresa_actualizada.descripcion_parroquia_est,
+            "CODIGO_CIIU": &empresa_actualizada.codigo_ciiu,
+            "ACTIVIDAD_ECONOMICA": &empresa_actualizada.actividad_economica,
+            "AGENTE_RETENCION": &empresa_actualizada.agente_retencion,
+            "ESPECIAL": &empresa_actualizada.especial,
         }
     };
     match collection.update_one(filter, update).await {
@@ -98,7 +108,7 @@ pub async fn update_empresa_by_ruc(collection: web::Data<Collection<Empresa>>, p
 /// Eliminar una empresa
 pub async fn delete_empresa_por_ruc(collection: web::Data<Collection<Empresa>>, ruc: web::Path<String>) -> impl Responder {
     let ruc = ruc.into_inner();
-    let filter = doc! { "numero_ruc": &ruc };
+    let filter = doc! { "NUMERO_RUC": &ruc };
     match collection.delete_one(filter).await {
         Ok(result) => {
             if result.deleted_count > 0 {

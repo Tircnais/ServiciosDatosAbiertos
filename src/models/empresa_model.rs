@@ -115,7 +115,7 @@ pub struct Empresa {
     pub agente_retencion: Option<String>,
     #[serde(rename = "ESPECIAL")]
     pub especial: Option<String>,
-    
+    /*
     #[serde(
         rename = "created_at",
         serialize_with = "serialize_datetime",
@@ -123,5 +123,5 @@ pub struct Empresa {
         default
     )]
     pub created_at: Option<chrono::DateTime<Utc>>,
-
+    */
 }
