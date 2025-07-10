@@ -5,8 +5,6 @@ use crate::models::empresa_model::Empresa;
 
 pub async fn get_mongo_client() -> Client {
     dotenv::dotenv().ok();
-    // let username = env::var("DB_USERNAME").expect("DB_USERNAME debe ser asignado");
-    // let password = env::var("DB_PASSWORD").expect("DB_PASSWORD debe ser asignado");
     let host = env::var("DB_URL").unwrap_or_else(|_| "mongodb://127.0.0.1:8080".to_string());
     let port = env::var("DB_PORT").unwrap_or_else(|_| "8080".to_string());
     
