@@ -10,10 +10,15 @@ use dotenv::dotenv;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Reemplaza con tu cadena de conexión
+    // dotenv::dotenv().ok();
     dotenv().ok();
+    // CAMBIADO: antes toda esta lógica estaba aquí duplicando db.rs
+    // Ahora usamos la función centralizada de db.rs
     let collection = db::get_empresa_collection().await;
 
-    let app_host = env::var("DB_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    // AGREGADO: el host y puerto ahora vienen del .env
+    let app_host = env::var("DB_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
     let app_port = env::var("DB_PORT").unwrap_or_else(|_| "8080".to_string());
     let bind_address = format!("{}:{}", app_host, app_port);
 
