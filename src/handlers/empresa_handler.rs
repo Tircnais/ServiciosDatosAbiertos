@@ -19,7 +19,14 @@ pub struct PaginationParams {
 pub async fn get_empresas(collection: web::Data<Collection<Empresa>>, params: web::Query<PaginationParams>,) -> impl Responder {
     // Obtener página y límite, con valores por defecto si no se proporcionan
     let page = max(params.page.unwrap_or(1), 1); // Asegurar que la página sea al menos 1
-    let limit = params.limit.unwrap_or(100); // Límite por defecto, puedes ajustarlo
+    // let limit = params.limit.unwrap_or(10); // Límite por defecto, puedes ajustarlo
+    // dame el valor que tiene, o si no tiene ninguno, usa 10
+    // min ESTABLECE un limite en caso de ser, igual o menor a 20. Se respeta el limite de numero si es mayor a 20.
+    // Ej: ?limit=5 | Salida 5
+    // Ej: ?limit=50 | Salida 20
+    // Ej: ?limit=8 | Salida 8
+    // Ej: ?limit= | Salida 10 (POR DEFECTO)
+    let limit = params.limit.unwrap_or(10).min(20);
 
     // Calcular cuántos documentos saltar
     let skip = (page - 1) * limit as u64;
@@ -47,6 +54,87 @@ pub async fn get_empresas(collection: web::Data<Collection<Empresa>>, params: we
     HttpResponse::Ok().json(empresas)
 }
 
+/// Buscar empresas por similitud en razón social
+pub async fn search_empresas_by_razon_social(
+    collection: web::Data<Collection<Empresa>>,
+    razon_social: web::Path<String>,
+    params: web::Query<PaginationParams>,
+) -> impl Responder {
+    let texto = razon_social.into_inner();
+    
+    let limit = params.limit.unwrap_or(20).min(100);
+    let page = max(params.page.unwrap_or(1), 1);
+    let skip = (page - 1) * limit as u64;
+
+    // ESTA ES TU CONSULTA: $regex + $options: "i"
+    /*
+    let filter = doc! {
+        "RAZON_SOCIAL": {
+            "$regex": &texto,
+            "$options": "i"
+        }
+    };
+    */
+    // Este tipo de busqueda para indices de tipo texto
+    let filter = doc! {
+        "$text": {
+            "$search": &texto
+        }
+    };
+
+    // AGREGADO: contamos el total de coincidencias con ese texto
+    let total = match collection.count_documents(filter.clone()).await {
+        Ok(count) => count,
+        Err(e) => return HttpResponse::InternalServerError().body(format!("Error al contar: {}", e)),
+    };
+
+    // AGREGADO: si el total es 0, nunca existieron coincidencias :: retorna JSON con status 200
+    if total == 0 {
+        return HttpResponse::Ok().json(serde_json::json!({
+            "mensaje": format!("No se encontraron empresas con '{}' en su razón social", texto),
+            "total_encontrados": 0
+        }));
+    }
+
+
+    let mut find_operation = collection.find(filter);
+    find_operation = find_operation.skip(skip);
+    find_operation = find_operation.limit(limit);
+
+    let mut cursor = match find_operation.await {
+        Ok(cursor) => cursor,
+        Err(e) => return HttpResponse::InternalServerError().body(format!("Error: {}", e)),
+    };
+
+    let mut empresas = Vec::new();
+    while let Some(result) = cursor.next().await {
+        match result {
+            Ok(empresa) => empresas.push(empresa),
+            Err(e) => return HttpResponse::InternalServerError().body(format!("Error al iterar: {}", e)),
+        }
+    }
+
+    // AGREGADO: si empresas está vacío pero total > 0, significa que esta página ya no tiene datos
+    if empresas.is_empty() {
+        return HttpResponse::Ok().json(serde_json::json!({
+            "mensaje": "No hay más coincidencias",
+            "total_encontrados": total,
+            "pagina_actual": page,
+            "elementos_por_pagina": limit,  // AGREGADO
+            "paginas_totales": (total as f64 / limit as f64).ceil() as u64
+        }));
+    }
+
+
+    // AGREGADO: la respuesta ahora incluye metadata de paginación
+    HttpResponse::Ok().json(serde_json::json!({
+        "total_encontrados": total,
+        "pagina_actual": page,
+        "elementos_por_pagina": limit,  // AGREGADO
+        "paginas_totales": (total as f64 / limit as f64).ceil() as u64,
+        "resultados": empresas
+    }))
+}
 
 /// Obtener una empresa por su RUC
 pub async fn get_empresa_by_ruc(collection: web::Data<Collection<Empresa>>, ruc: web::Path<String>) -> impl Responder {
@@ -103,7 +191,7 @@ pub async fn update_empresa_by_ruc(collection: web::Data<Collection<Empresa>>, p
         "$set": {
             "NUMERO_RUC": &empresa_actualizada.numero_ruc,
             "RAZON_SOCIAL": &empresa_actualizada.razon_social,
-            "PROVINCIA_JURISDICION": &empresa_actualizada.provincia_jurisdiccion,
+            "PROVINCIA_JURISDICCION": &empresa_actualizada.provincia_jurisdiccion,
             "ESTADO_CONTRIBUYENTE": &empresa_actualizada.estado_contribuyente,
             "CLASE_CONTRIBUYENTE": &empresa_actualizada.clase_contribuyente,
             "FECHA_INICIO_ACTIVIDADES": empresa_actualizada.fecha_inicio_actividades.as_ref().map(|f| {

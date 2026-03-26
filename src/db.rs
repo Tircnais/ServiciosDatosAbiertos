@@ -3,31 +3,33 @@ use mongodb::{options::ClientOptions, Client, Collection };
 use std::env;
 use crate::models::empresa_model::Empresa;
 
-pub async fn get_mongo_client() -> Client {
-    dotenv::dotenv().ok();
-    let host = env::var("DB_URL").unwrap_or_else(|_| "mongodb://127.0.0.1:8080".to_string());
-    let port = env::var("DB_PORT").unwrap_or_else(|_| "8080".to_string());
-    
-    let client_url = format!("mongodb://{}:{}", host, port);
-    let client_uri = env::var("DB_URL").unwrap_or_else(|_| client_url);
-    /*
-    let credential = Credential::builder()
-        .username(Some(username))
-        .password(Some(password))
-        .source(Some(auth_source))
-        .build();
-    */
-    
-    let options = ClientOptions::parse(client_uri).await.unwrap();
-    // options.credential = Some(credential);
+pub async fn get_mongo_client() -> Result<Client, mongodb::error::Error> {
+    // CAMBIADO: antes tenías lógica confusa donde DB_URL se usaba dos veces
+    // Ahora es simple: si existe DB_URL la usas, si no construyes la URI
+    let client_uri = match env::var("DB_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            let mdbhost = env::var("MDB_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+            let mdbport = env::var("MDB_PORT").unwrap_or_else(|_| "27017".to_string());
+            format!("mongodb://{}:{}", mdbhost, mdbport)
+        }
+    };
 
-    Client::with_options(options).unwrap()
+    println!("Conectando a MongoDB en: {}", client_uri);
+
+    // CAMBIADO: antes usabas .unwrap(), ahora propagas el error con ?
+    let options = ClientOptions::parse(client_uri).await?;
+    Client::with_options(options)
 }
 
 pub async fn get_empresa_collection() -> Collection<Empresa> {
-    let client = get_mongo_client().await;
-    let db_name = std::env::var("DATABASE_NAME").unwrap_or_else(|_| "DatosAbiertosEcuador".to_string());
-    let colection_name = std::env::var("USER_COLLECTION_NAME").unwrap_or_else(|_| "FuenteGobEc".to_string());
-    let db = client.database(&db_name);
-    db.collection::<Empresa>(&colection_name)
+    // CAMBIADO: antes el error era silencioso con .unwrap()
+    // Ahora si falla la conexión el mensaje es claro
+    let client = get_mongo_client().await.expect(
+        "Error al conectar con MongoDB. Verifica DB_URL en tu archivo .env"
+    );
+
+    let db_name = env::var("DATABASE_NAME").unwrap_or_else(|_| "DatosAbiertosEcuador".to_string());
+    let collection_name = env::var("USER_COLLECTION_NAME").unwrap_or_else(|_| "Empresas".to_string());
+    client.database(&db_name).collection::<Empresa>(&collection_name)
 }

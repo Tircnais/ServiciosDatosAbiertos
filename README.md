@@ -17,6 +17,21 @@ El proyecto usa Rust + MongoDB. Falta un API para la carga de datos desde CSV a 
 Inicialmente, se cargaron los datos usando **Pentaho Data Integration**, la creación del API tiene que reemplazar esta carga manual por una API REST para que se pueda realizar la carga/actualización de datos a MongoDB.
 ```
 
+> Problemas
+
+1. Para revisar problemas con las dependencias y error no detectados en la ejecución.
+   ```bash
+   cargo clippy
+   ```
+2. Para limpiar el proyecto, elimina las depencias.
+   ```bash
+   cargo clean
+   ```
+4. Levantar el proyecto
+   ```bash
+   cargo run
+   ```
+
 > Consulta a las API:
 
 ```
